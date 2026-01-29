@@ -401,7 +401,9 @@ service cloud.firestore {
                 if (items[i].type.indexOf('image') !== -1) {
                     const file = items[i].getAsFile();
                     const reader = new FileReader();
-                    reader.onload = () => extractIA(null, reader.result.split(',')[1], items[i].type);
+                    // FIX: use file.type instead of items[i].type inside the callback
+                    // items list might not be accessible in the async callback
+                    reader.onload = () => extractIA(null, reader.result.split(',')[1], file.type);
                     reader.readAsDataURL(file);
                 }
             }
