@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logística | Torre de Controle</title>
+    <title>Azevedo Routech | TMS Enterprise</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -80,6 +80,7 @@
                 <div class="p-4 border-t border-slate-200 bg-white space-y-3">
                     <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-50 hover:border-emerald-400 transition-all">
                         <p class="text-xs font-bold text-slate-600 flex items-center justify-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Importar Pedidos (PDF/Img)</p>
+                        <p class="text-[9px] text-slate-400 mt-1 font-bold italic">Ou cole (Ctrl+V) um print aqui</p>
                         <input type="file" id="fileInput" class="hidden" accept="application/pdf,image/*" multiple>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
@@ -133,6 +134,36 @@
     </div>
     <div id="toast" class="fixed top-6 right-6 z-[100] hidden transition-all duration-300 transform translate-x-full"><div class="bg-slate-800 text-white px-6 py-3 rounded shadow-xl flex items-center gap-3 border-l-4 border-emerald-500"><div id="toastDot" class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div><span id="toastMsg" class="text-xs font-bold uppercase tracking-wide">Mensagem</span></div></div>
 
+    <!-- MODAL DE ERRO DE PERMISSÃO (NOVO) -->
+    <div id="permissionModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border-l-8 border-red-500">
+            <h3 class="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Acesso Bloqueado pelo Firebase
+            </h3>
+            <p class="text-slate-600 text-sm mb-4 leading-relaxed">
+                O banco de dados foi criado, mas as <b>Regras de Segurança</b> estão impedindo o salvamento dos dados. Você precisa liberar o acesso no painel do Firebase.
+            </p>
+            
+            <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 mb-6">
+                <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">1. Vá em Firestore Database > Aba Regras</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">2. Cole este código e clique em Publicar:</p>
+                <pre class="bg-slate-800 text-emerald-400 p-3 rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="document.getElementById('permissionModal').classList.add('hidden')" class="px-6 py-3 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg">Entendi, vou corrigir</button>
+            </div>
+        </div>
+    </div>
+
     <!-- LÓGICA -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
@@ -143,8 +174,7 @@
         // State (Mover para o topo para evitar ReferenceError)
         let orders = [], vehicles = [], map = null, markersGroup = null, itemToDeleteInfo = null, editingVehicleId = null;
 
-        // --- ÁREA DE CONFIGURAÇÃO (PREENCHA AQUI) ---
-        // Configuração gerada automaticamente a partir das suas imagens
+        // --- ÁREA DE CONFIGURAÇÃO (SUAS CHAVES REAIS) ---
         const firebaseConfig = {
             apiKey: "AIzaSyD1Lj__jgJdw6ovVHtRMDJTFrpd2w2Iy1Y",
             authDomain: "azevedo-logistica.firebaseapp.com",
@@ -155,7 +185,9 @@
         };
 
         const apiKey = "AIzaSyB7EIw_Bz9pAwvkt_t2KKgD9SMznAdF5K8";
-        const appId = 'azevedo-tms-production';
+        
+        const ORDERS_COLLECTION = 'orders';
+        const VEHICLES_COLLECTION = 'vehicles';
 
         // --- INICIALIZAÇÃO ---
         let app, db;
@@ -188,14 +220,23 @@
         // Database Listeners
         function setupDatabase() {
             if (!db) return;
-            onSnapshot(collection(db, appId, 'data', 'orders'), (snap) => {
+            
+            const handlePermissionError = (error) => {
+                console.error("Erro Firebase:", error);
+                if (error.code === 'permission-denied' || error.message.includes('permission')) {
+                    document.getElementById('permissionModal').classList.remove('hidden');
+                }
+            };
+
+            onSnapshot(collection(db, ORDERS_COLLECTION), (snap) => {
                 orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 updatePlanningUI();
-            });
-            onSnapshot(collection(db, appId, 'data', 'vehicles'), (snap) => {
+            }, handlePermissionError);
+
+            onSnapshot(collection(db, VEHICLES_COLLECTION), (snap) => {
                 vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 updateFleetUI();
-            });
+            }, handlePermissionError);
         }
 
         // Fleet Logic
@@ -222,14 +263,18 @@
             try {
                 const data = { model, plate, capacity: weight, name: `${model} - ${plate}`, createdAt: Date.now() };
                 if (editingVehicleId) {
-                    await updateDoc(doc(db, appId, 'data', 'vehicles', editingVehicleId), data);
+                    await updateDoc(doc(db, VEHICLES_COLLECTION, editingVehicleId), data);
                     showToast("Atualizado!", "success");
                 } else {
-                    await addDoc(collection(db, appId, 'data', 'vehicles'), data);
+                    await addDoc(collection(db, VEHICLES_COLLECTION), data);
                     showToast("Cadastrado!", "success");
                 }
                 resetFleetForm();
-            } catch (e) { console.error(e); showToast("Erro ao salvar", "error"); }
+            } catch (e) { 
+                console.error(e); 
+                if (e.code === 'permission-denied') document.getElementById('permissionModal').classList.remove('hidden');
+                else showToast("Erro ao salvar: " + e.code, "error"); 
+            }
             finally { btnSaveFleet.innerText = editingVehicleId ? "Atualizar" : "Salvar Veículo"; }
         };
 
@@ -330,7 +375,7 @@
                 const json = await res.json();
                 let data = JSON.parse(json.candidates[0].content.parts[0].text);
                 if (!Array.isArray(data)) data = [data];
-                for (const item of data) if (!orders.some(o => String(o.numero_pedido) === String(item.numero_pedido))) await addDoc(collection(db, appId, 'data', 'orders'), { ...item, createdAt: Date.now() });
+                for (const item of data) if (!orders.some(o => String(o.numero_pedido) === String(item.numero_pedido))) await addDoc(collection(db, ORDERS_COLLECTION), { ...item, createdAt: Date.now() });
                 showToast("Importado!", "success");
             } catch (e) { showToast("Erro IA: Verifique a API Key", "error"); }
         }
@@ -349,6 +394,19 @@
             }
         };
 
+        // Paste Handler (Restored)
+        window.addEventListener('paste', e => {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = () => extractIA(null, reader.result.split(',')[1], items[i].type);
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
         // Actions
         document.body.addEventListener('click', e => {
             const editBtn = e.target.closest('.btn-edit-veh');
@@ -358,15 +416,15 @@
                 const v = vehicles.find(x => x.id === editBtn.dataset.id);
                 if (v) { fleetModelInput.value = v.model; fleetPlateInput.value = v.plate; fleetWeightInput.value = v.capacity; editingVehicleId = v.id; fleetFormTitle.innerText = "Editar"; btnSaveFleet.innerText = "Atualizar"; btnCancelEdit.classList.remove('hidden'); fleetModelInput.scrollIntoView(); }
             }
-            if (delVeh) { itemToDeleteInfo = { col: 'vehicles', id: delVeh.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
-            if (delOrd) { itemToDeleteInfo = { col: 'orders', id: delOrd.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
+            if (delVeh) { itemToDeleteInfo = { col: VEHICLES_COLLECTION, id: delVeh.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
+            if (delOrd) { itemToDeleteInfo = { col: ORDERS_COLLECTION, id: delOrd.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
         });
         document.getElementById('btnCancelDelete').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
         document.getElementById('btnConfirmDelete').onclick = async () => {
-            if (itemToDeleteInfo) await deleteDoc(doc(db, appId, 'data', itemToDeleteInfo.col, itemToDeleteInfo.id));
+            if (itemToDeleteInfo) await deleteDoc(doc(db, itemToDeleteInfo.col, itemToDeleteInfo.id));
             document.getElementById('deleteModal').classList.add('hidden'); showToast("Removido!", "success");
         };
-        document.getElementById('btnClear').onclick = async () => { if(confirm("Limpar tudo?")) (await getDocs(collection(db, appId, 'data', 'orders'))).forEach(d => deleteDoc(d.ref)); };
+        document.getElementById('btnClear').onclick = async () => { if(confirm("Limpar tudo?")) (await getDocs(collection(db, ORDERS_COLLECTION))).forEach(d => deleteDoc(d.ref)); };
 
         function showToast(msg, type) {
             const t = document.getElementById('toast'); document.getElementById('toastMsg').innerText = msg;
