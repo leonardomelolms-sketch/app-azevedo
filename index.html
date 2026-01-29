@@ -128,13 +128,28 @@
         </div>
     </div>
 
+    <!-- LOADING OVERLAY (NOVO RECURSO VISUAL) -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 transform scale-100 transition-transform duration-300 animate-[fadeIn_0.3s_ease-out]">
+            <div class="relative">
+                <div class="w-16 h-16 border-4 border-slate-100 rounded-full"></div>
+                <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                <svg class="w-8 h-8 text-emerald-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <div class="text-center">
+                <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Processando IA</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1">Lendo dados do pedido...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- UTILS -->
     <div id="deleteModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
         <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-2xl"><h3 class="text-lg font-bold text-slate-800 mb-2">Confirmar Exclusão</h3><p class="text-slate-500 text-sm mb-6">Ação irreversível.</p><div class="flex gap-3 justify-end"><button id="btnCancelDelete" class="px-4 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-100">CANCELAR</button><button id="btnConfirmDelete" class="px-4 py-2 rounded text-xs font-bold bg-red-600 text-white hover:bg-red-700">EXCLUIR</button></div></div>
     </div>
     <div id="toast" class="fixed top-6 right-6 z-[100] hidden transition-all duration-300 transform translate-x-full"><div class="bg-slate-800 text-white px-6 py-3 rounded shadow-xl flex items-center gap-3 border-l-4 border-emerald-500"><div id="toastDot" class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div><span id="toastMsg" class="text-xs font-bold uppercase tracking-wide">Mensagem</span></div></div>
 
-    <!-- MODAL DE ERRO DE PERMISSÃO (NOVO) -->
+    <!-- MODAL DE ERRO DE PERMISSÃO -->
     <div id="permissionModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
         <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border-l-8 border-red-500">
             <h3 class="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
@@ -144,7 +159,6 @@
             <p class="text-slate-600 text-sm mb-4 leading-relaxed">
                 O banco de dados foi criado, mas as <b>Regras de Segurança</b> estão impedindo o salvamento dos dados. Você precisa liberar o acesso no painel do Firebase.
             </p>
-            
             <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 mb-6">
                 <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">1. Vá em Firestore Database > Aba Regras</p>
                 <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">2. Cole este código e clique em Publicar:</p>
@@ -157,7 +171,6 @@ service cloud.firestore {
   }
 }</pre>
             </div>
-
             <div class="flex justify-end">
                 <button onclick="document.getElementById('permissionModal').classList.add('hidden')" class="px-6 py-3 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg">Entendi, vou corrigir</button>
             </div>
@@ -367,17 +380,37 @@ service cloud.firestore {
 
         const dropZone = document.getElementById('dropZone'), fileInput = document.getElementById('fileInput');
         async function extractIA(text, base64, mime) {
-            showToast("Lendo...", "info");
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: `Extraia JSON pedidos (Recife/PE): {numero_pedido, cliente, endereco, total, lat, lng}.` }, ...(base64 ? [{ inlineData: { mimeType: mime, data: base64 } }] : [])] }], generationConfig: { responseMimeType: "application/json" } })
                 });
                 const json = await res.json();
+                
+                if (!json.candidates) throw new Error("Sem resposta da IA");
+
                 let data = JSON.parse(json.candidates[0].content.parts[0].text);
                 if (!Array.isArray(data)) data = [data];
-                for (const item of data) if (!orders.some(o => String(o.numero_pedido) === String(item.numero_pedido))) await addDoc(collection(db, ORDERS_COLLECTION), { ...item, createdAt: Date.now() });
-                showToast("Importado!", "success");
-            } catch (e) { showToast("Erro IA: Verifique a API Key", "error"); }
+                
+                let count = 0;
+                for (const item of data) {
+                    if (!orders.some(o => String(o.numero_pedido) === String(item.numero_pedido))) {
+                        await addDoc(collection(db, ORDERS_COLLECTION), { ...item, createdAt: Date.now() });
+                        count++;
+                    }
+                }
+                
+                if(count > 0) showToast(`${count} Pedidos Importados!`, "success");
+                else showToast("Nenhum pedido novo encontrado", "error");
+
+            } catch (e) { 
+                console.error(e);
+                showToast("Erro na Leitura: " + (e.message || "Verifique console"), "error"); 
+            } finally {
+                overlay.classList.add('hidden');
+            }
         }
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = async (e) => {
@@ -401,8 +434,6 @@ service cloud.firestore {
                 if (items[i].type.indexOf('image') !== -1) {
                     const file = items[i].getAsFile();
                     const reader = new FileReader();
-                    // FIX: use file.type instead of items[i].type inside the callback
-                    // items list might not be accessible in the async callback
                     reader.onload = () => extractIA(null, reader.result.split(',')[1], file.type);
                     reader.readAsDataURL(file);
                 }
