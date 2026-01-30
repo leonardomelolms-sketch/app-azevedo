@@ -6,6 +6,7 @@
     <title>Azevedo Routech | TMS Enterprise</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -26,7 +27,14 @@
         .nav-item { color: #94A3B8; }
         .nav-item:hover:not(.active) { background-color: #F1F5F9; color: #334155; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
+        .stat-card { @apply bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md; }
+        .stat-title { @apply text-xs font-bold text-slate-400 uppercase tracking-wider mb-2; }
+        .stat-value { @apply text-2xl font-black text-slate-800; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .ai-report h3 { color: #059669; font-weight: 800; font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ai-report ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .ai-report li { margin-bottom: 0.25rem; font-size: 0.9rem; color: #334155; }
+        .ai-report p { font-size: 0.9rem; color: #475569; margin-bottom: 1rem; line-height: 1.5; }
     </style>
 </head>
 <body class="text-slate-700 h-screen w-screen flex">
@@ -35,73 +43,173 @@
     <nav class="w-[70px] bg-white border-r border-slate-200 flex flex-col items-center py-6 z-30 flex-shrink-0">
         <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-8 shadow-lg shadow-emerald-200">A</div>
         <div class="space-y-4 w-full px-3">
+            <button id="navDashboard" class="nav-item w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all" title="Dashboard">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                <span class="text-[9px] font-bold">Dash</span>
+            </button>
             <button id="navPlanning" class="nav-item active w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all" title="Planejamento">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-1.447-.894L15 7m0 13V7"></path></svg>
                 <span class="text-[9px] font-bold">Rota</span>
+            </button>
+            <button id="navHistory" class="nav-item w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all" title="Histórico">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <span class="text-[9px] font-bold">Busca</span>
             </button>
             <button id="navFleet" class="nav-item w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all" title="Gestão de Frota">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 <span class="text-[9px] font-bold">Frota</span>
             </button>
+            <button id="navTeam" class="nav-item w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all" title="Gestão de Equipe">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span class="text-[9px] font-bold">Equipe</span>
+            </button>
         </div>
-        <div class="mt-auto"><div id="statusDot" class="w-3 h-3 bg-amber-500 rounded-full animate-pulse" title="Status Conexão"></div></div>
+        <div class="mt-auto pb-4 flex flex-col items-center gap-2">
+            <button onclick="document.getElementById('apiKeyModal').classList.remove('hidden')" class="text-slate-400 hover:text-slate-600" title="Configurar Chave IA">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            </button>
+            <div id="statusDot" class="w-3 h-3 bg-amber-500 rounded-full animate-pulse" title="Status Conexão"></div>
+        </div>
     </nav>
 
     <!-- ÁREA PRINCIPAL -->
     <div class="flex-1 flex overflow-hidden relative bg-slate-50">
+        
+        <!-- VIEW: DASHBOARD -->
+        <div id="viewDashboard" class="hidden w-full h-full absolute inset-0 z-10 bg-slate-50 overflow-y-auto p-8">
+            <div class="max-w-7xl mx-auto">
+                <header class="mb-8">
+                    <h1 class="text-2xl font-bold text-slate-800">Painel de Controle</h1>
+                    <p class="text-sm text-slate-500">Visão geral da operação logística.</p>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card"><span class="stat-title">Total Entregas</span><div class="flex items-end justify-between"><span class="stat-value" id="dashTotalDeliveries">0</span><div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg></div></div></div>
+                    <div class="stat-card"><span class="stat-title">Entregues</span><div class="flex items-end justify-between"><span class="stat-value text-emerald-600" id="dashCompleted">0</span><div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div></div></div>
+                    <div class="stat-card"><span class="stat-title">Em Rota</span><div class="flex items-end justify-between"><span class="stat-value text-amber-500" id="dashInProgress">0</span><div class="p-2 bg-amber-50 text-amber-500 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div></div></div>
+                    <div class="stat-card"><span class="stat-title">Taxa de Sucesso</span><div class="flex items-end justify-between"><span class="stat-value" id="dashSuccessRate">0%</span><div class="p-2 bg-purple-50 text-purple-600 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></div></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">Performance por Motorista</h3><canvas id="chartDrivers"></canvas></div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2">Carga por Veículo</h3><canvas id="chartVehicles"></canvas></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2">
+                        <h3 class="font-bold text-slate-800 mb-4">Top 5 Clientes (Volume)</h3>
+                        <div class="overflow-hidden"><table class="w-full text-left"><thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold"><tr><th class="px-4 py-3">Cliente</th><th class="px-4 py-3 text-right">Pedidos</th><th class="px-4 py-3 text-right">Total (R$)</th></tr></thead><tbody id="tableTopCustomers" class="text-sm text-slate-600 divide-y divide-slate-100"></tbody></table></div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                            <h4 class="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Motorista Destaque</h4>
+                            <h2 class="text-2xl font-black mb-4" id="cardTopDriver">---</h2>
+                            <p class="text-xs opacity-90">Maior volume de entregas.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"><h3 class="font-bold text-slate-800 mb-4">Status Geral</h3><canvas id="chartStatus"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: HISTÓRICO -->
+        <div id="viewHistory" class="hidden w-full h-full absolute inset-0 z-10 bg-slate-50 p-8 overflow-y-auto">
+            <div class="max-w-7xl mx-auto h-full flex flex-col">
+                <header class="mb-6 flex justify-between items-end">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">Histórico de Operações</h1>
+                        <p class="text-sm text-slate-500">Busque por rotas passadas ou localize pedidos específicos.</p>
+                    </div>
+                    <div class="bg-white p-1 rounded-lg border border-slate-200 flex text-xs font-bold shadow-sm">
+                        <button id="btnHistRoutes" class="px-4 py-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">Por Rota</button>
+                        <button id="btnHistOrders" class="px-4 py-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">Por Pedido</button>
+                    </div>
+                </header>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Busca Textual</label>
+                        <input type="text" id="histSearchInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="Nº Pedido, Cliente, Motorista...">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Data</label>
+                        <input type="date" id="histDateInput" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500">
+                    </div>
+                    <button id="btnHistClear" class="text-xs font-bold text-slate-400 hover:text-red-500 mb-2">Limpar</button>
+                </div>
+                <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div class="overflow-auto flex-1">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold sticky top-0 z-10">
+                                <tr id="histHeaderRow"></tr>
+                            </thead>
+                            <tbody id="histBody" class="text-sm text-slate-600 divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- VIEW: PLANEJAMENTO -->
         <div id="viewPlanning" class="flex w-full h-full absolute inset-0 z-10 bg-slate-50">
-            <aside class="w-full md:w-[400px] bg-white border-r border-slate-200 flex flex-col z-20 sidebar-shadow h-full">
+            <aside class="w-full md:w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 sidebar-shadow h-full">
+                <!-- Header -->
                 <div class="p-4 border-b border-slate-100 bg-white">
                     <h1 class="font-bold text-slate-800 text-sm tracking-tight uppercase">Planejamento</h1>
-                    <p class="text-[10px] text-slate-400 font-medium">Azevedo TMS Enterprise</p>
+                    <div class="flex gap-4 mt-4">
+                        <button id="tabPlanNew" class="tab-btn active-tab">Planejar</button>
+                        <button id="tabPlanSaved" class="tab-btn">Minhas Rotas</button>
+                    </div>
                 </div>
-                <div class="p-4 space-y-3 bg-slate-50/50 border-b border-slate-200">
-                    <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-2 w-full">
-                                <div class="p-1.5 bg-slate-100 rounded text-slate-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div>
-                                <div class="flex-grow">
-                                    <select id="vehicleSelector" class="text-sm font-bold text-slate-800 bg-transparent outline-none cursor-pointer hover:text-emerald-600 w-full"><option value="">Carregando frota...</option></select>
-                                    <p class="text-[10px] text-slate-400" id="vehicleCapacityLabel">Selecione um veículo</p>
+
+                <div id="contentPlanNew" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-4 space-y-3 bg-slate-50/50 border-b border-slate-200">
+                        <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2 w-full">
+                                    <div class="p-1.5 bg-slate-100 rounded text-slate-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div>
+                                    <div class="flex-grow">
+                                        <div class="flex justify-between items-center">
+                                            <select id="vehicleSelector" class="text-sm font-bold text-slate-800 bg-transparent outline-none cursor-pointer hover:text-emerald-600 w-full"><option value="">Carregando frota...</option></select>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400" id="vehicleCapacityLabel">Selecione um veículo</p>
+                                        <div class="grid grid-cols-2 gap-2 mt-2">
+                                            <select id="planningDriverSelect" class="bg-transparent text-[10px] font-bold text-slate-600 outline-none w-full border-b border-slate-200 pb-1 cursor-pointer"><option value="">Motorista...</option></select>
+                                            <select id="planningHelperSelect" class="bg-transparent text-[10px] font-bold text-slate-600 outline-none w-full border-b border-slate-200 pb-1 cursor-pointer"><option value="">Ajudante...</option></select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="grid grid-cols-3 gap-2 mt-3 border-t border-slate-100 pt-2 text-center">
+                                <div><p class="text-[10px] text-slate-400">Ocupação</p><p class="text-xs font-bold text-slate-700" id="occupancyValue">--%</p></div>
+                                <div><p class="text-[10px] text-slate-400">Peso Total</p><p class="text-xs font-bold text-emerald-600" id="totalWeightValue">0 kg</p></div>
+                                <div><p class="text-[10px] text-slate-400">Total Valor</p><p class="text-xs font-bold text-slate-700" id="totalValue">R$ 0,00</p></div>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-3 gap-2 mt-3 border-t border-slate-100 pt-2 text-center">
-                            <div><p class="text-[10px] text-slate-400">Ocupação</p><p class="text-xs font-bold text-slate-700">--%</p></div>
-                            <div><p class="text-[10px] text-slate-400">Total Carga</p><p class="text-xs font-bold text-emerald-600" id="totalValue">R$ 0,00</p></div>
-                            <div><p class="text-[10px] text-slate-400">Entregas</p><p class="text-xs font-bold text-slate-700" id="totalOrders">0</p></div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto bg-white relative p-4" id="timelineContainer">
+                        <div class="flex flex-col items-center justify-center h-full text-slate-300 gap-2"><p class="text-xs font-medium">Nenhum pedido carregado</p></div>
+                    </div>
+                    <div class="p-4 border-t border-slate-200 bg-white space-y-3">
+                        <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-50 hover:border-emerald-400 transition-all">
+                            <p class="text-xs font-bold text-slate-600 flex items-center justify-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Importar Pedidos (PDF/Img)</p>
+                            <input type="file" id="fileInput" class="hidden" accept="application/pdf,image/*" multiple>
                         </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btnGenerateRoute" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded shadow-sm text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Otimizar</button>
+                            <button id="btnSaveRoute" class="bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded shadow-sm text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg> Salvar Rota</button>
+                        </div>
+                        <button id="btnClear" class="w-full text-slate-400 hover:text-red-500 py-1 rounded text-[10px] font-bold uppercase tracking-wide transition-colors">Limpar Rascunho</button>
                     </div>
                 </div>
-                <div class="flex-1 overflow-y-auto bg-white relative p-4" id="timelineContainer">
-                    <div class="flex flex-col items-center justify-center h-full text-slate-300 gap-2"><p class="text-xs font-medium">Nenhum pedido carregado</p></div>
-                </div>
-                <div class="p-4 border-t border-slate-200 bg-white space-y-3">
-                    <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-50 hover:border-emerald-400 transition-all">
-                        <p class="text-xs font-bold text-slate-600 flex items-center justify-center gap-2"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Importar Pedidos (PDF/Img)</p>
-                        <p class="text-[9px] text-slate-400 mt-1 font-bold italic">Ou cole (Ctrl+V) um print aqui</p>
-                        <input type="file" id="fileInput" class="hidden" accept="application/pdf,image/*" multiple>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="btnGenerateRoute" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded shadow-sm text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors disabled:opacity-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Otimizar</button>
-                        <button id="btnClear" class="bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded shadow-sm text-xs font-bold uppercase tracking-wide transition-colors">Limpar</button>
-                    </div>
+
+                <div id="contentPlanSaved" class="flex-1 flex-col overflow-hidden hidden"><div class="flex-1 overflow-y-auto bg-slate-50 p-4 space-y-3" id="savedRoutesList"></div></div>
+                <div id="contentRouteDetail" class="flex-1 flex-col overflow-hidden hidden bg-slate-50">
+                    <div class="bg-white p-4 border-b border-slate-200 flex justify-between items-center shadow-sm z-10"><button id="btnBackToRoutes" class="text-slate-500 hover:text-slate-800 flex items-center gap-1 text-xs font-bold uppercase"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Voltar</button><div class="text-right"><h3 class="font-bold text-slate-800 text-sm" id="detailRouteName">Rota</h3><p class="text-[10px] text-emerald-600 font-bold" id="detailRouteProgress">0% Concluído</p></div></div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="routeOrdersList"></div>
                 </div>
             </aside>
+            
             <main class="flex-1 flex flex-col relative h-full">
                 <div id="map" class="flex-1 w-full bg-slate-100 z-0"></div>
-                <div class="absolute top-4 right-4 z-10 bg-white rounded-md shadow-lg p-1 flex flex-col gap-1">
-                    <button id="btnZoomIn" class="p-2 hover:bg-slate-50 rounded text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
-                    <button id="btnZoomOut" class="p-2 hover:bg-slate-50 rounded text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button>
-                </div>
-                <div class="h-64 bg-white border-t border-slate-200 z-10 flex flex-col shadow-lg">
-                    <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-500 uppercase">Detalhamento</span>
-                        <span class="text-xs font-bold text-emerald-600 uppercase">Total: <span id="tableCount">0</span></span>
-                    </div>
-                    <div class="flex-1 overflow-auto"><table class="w-full text-left border-collapse"><thead class="bg-white sticky top-0 z-10 shadow-sm"><tr><th class="p-3 text-[10px] font-bold text-slate-400 uppercase w-10">Seq</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase">Pedido</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase">Cliente</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase text-right">Valor</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase text-center">Ações</th></tr></thead><tbody id="tableBody" class="text-xs text-slate-600 divide-y divide-slate-50"></tbody></table></div>
-                </div>
+                <div class="absolute top-4 right-4 z-10 bg-white rounded-md shadow-lg p-1 flex flex-col gap-1"><button id="btnZoomIn" class="p-2 hover:bg-slate-50 rounded text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button><button id="btnZoomOut" class="p-2 hover:bg-slate-50 rounded text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button></div>
+                <div class="h-64 bg-white border-t border-slate-200 z-10 flex flex-col shadow-lg"><div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center"><span class="text-xs font-bold text-slate-500 uppercase">Detalhamento</span><span class="text-xs font-bold text-emerald-600 uppercase">Pedidos: <span id="tableCount">0</span></span></div><div class="flex-1 overflow-auto"><table class="w-full text-left border-collapse"><thead class="bg-white sticky top-0 z-10 shadow-sm"><tr><th class="p-3 text-[10px] font-bold text-slate-400 uppercase w-10">Seq</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase">Pedido</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase">Cliente</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase text-right">Peso (Kg)</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase text-right">Valor</th><th class="p-3 text-[10px] font-bold text-slate-400 uppercase text-center">Status</th></tr></thead><tbody id="tableBody" class="text-xs text-slate-600 divide-y divide-slate-50"></tbody></table></div></div>
             </main>
         </div>
 
@@ -116,78 +224,57 @@
                         <div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Capacidade (Kg)</label><input type="number" id="fleetWeight" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all" placeholder="0000"></div>
                     </div>
                 </div>
-                <div class="mt-8 pt-6 border-t border-slate-100 flex gap-3">
-                    <button id="btnCancelEdit" class="hidden w-1/3 bg-slate-200 text-slate-600 hover:bg-slate-300 py-4 rounded-xl font-bold uppercase tracking-wider text-xs">Cancelar</button>
-                    <button id="btnSaveFleet" class="flex-1 bg-slate-900 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg transition-all transform hover:-translate-y-0.5">Salvar Veículo</button>
+                <div class="mt-8 pt-6 border-t border-slate-100 flex gap-3"><button id="btnCancelEdit" class="hidden w-1/3 bg-slate-200 text-slate-600 hover:bg-slate-300 py-4 rounded-xl font-bold uppercase tracking-wider text-xs">Cancelar</button><button id="btnSaveFleet" class="flex-1 bg-slate-900 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg transition-all transform hover:-translate-y-0.5">Salvar Veículo</button></div>
+            </div>
+            <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden"><div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white"><h3 class="font-bold text-slate-700 text-lg">Frota Cadastrada</h3><span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold" id="fleetCountBadge">0 Veículos</span></div><div class="flex-1 overflow-auto p-0"><table class="w-full text-left"><thead class="bg-slate-50 sticky top-0"><tr><th class="p-4 text-[10px] font-bold text-slate-400 uppercase w-20">Ícone</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Modelo</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Placa</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Capacidade</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase text-right">Gerenciar</th></tr></thead><tbody id="fleetListBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody></table></div></div>
+        </div>
+
+        <!-- VIEW: EQUIPE -->
+        <div id="viewTeam" class="hidden w-full h-full absolute inset-0 z-20 bg-slate-100 p-8 flex gap-8">
+            <div class="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col h-fit">
+                <div class="mb-8"><h2 id="teamFormTitle" class="text-2xl font-bold text-slate-800">Cadastro de Equipe</h2><p class="text-sm text-slate-400 mt-1">Gerencie motoristas e ajudantes.</p></div>
+                <div class="space-y-5">
+                    <div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Nome Completo</label><input type="text" id="teamName" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all" placeholder="Nome do Funcionário"></div>
+                    <div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Função</label><select id="teamRole" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all"><option value="Motorista">Motorista</option><option value="Ajudante">Ajudante</option></select></div>
+                    <div class="pt-4 border-t border-slate-100 space-y-5">
+                        <p class="text-[10px] font-bold text-emerald-600 uppercase">Dados Adicionais</p>
+                        <div class="grid grid-cols-2 gap-4"><div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">CPF</label><input type="text" id="teamCpf" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all" placeholder="000.000.000-00"></div><div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Chave PIX</label><input type="text" id="teamPix" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all" placeholder="E-mail ou CPF"></div></div>
+                        <div><label class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Vencimento CNH</label><input type="date" id="teamCnhDate" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 transition-all"></div>
+                    </div>
                 </div>
+                <div class="mt-8 pt-6 border-t border-slate-100 flex gap-3"><button id="btnCancelTeamEdit" class="hidden w-1/3 bg-slate-200 text-slate-600 hover:bg-slate-300 py-4 rounded-xl font-bold uppercase tracking-wider text-xs">Cancelar</button><button id="btnSaveTeam" class="flex-1 bg-slate-900 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg transition-all transform hover:-translate-y-0.5">Salvar Funcionário</button></div>
             </div>
-            <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white"><h3 class="font-bold text-slate-700 text-lg">Frota Cadastrada</h3><span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold" id="fleetCountBadge">0 Veículos</span></div>
-                <div class="flex-1 overflow-auto p-0"><table class="w-full text-left"><thead class="bg-slate-50 sticky top-0"><tr><th class="p-4 text-[10px] font-bold text-slate-400 uppercase w-20">Ícone</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Modelo</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Placa</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Capacidade</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase text-right">Gerenciar</th></tr></thead><tbody id="fleetListBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody></table></div>
-            </div>
+            <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden"><div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white"><h3 class="font-bold text-slate-700 text-lg">Equipe Cadastrada</h3><span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold" id="teamCountBadge">0 Pessoas</span></div><div class="flex-1 overflow-auto p-0"><table class="w-full text-left"><thead class="bg-slate-50 sticky top-0"><tr><th class="p-4 text-[10px] font-bold text-slate-400 uppercase w-20">Tipo</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">Nome</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">CPF/PIX</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase">CNH</th><th class="p-4 text-[10px] font-bold text-slate-400 uppercase text-right">Gerenciar</th></tr></thead><tbody id="teamListBody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody></table></div></div>
         </div>
+
     </div>
 
-    <!-- LOADING OVERLAY (NOVO RECURSO VISUAL) -->
-    <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 transform scale-100 transition-transform duration-300 animate-[fadeIn_0.3s_ease-out]">
-            <div class="relative">
-                <div class="w-16 h-16 border-4 border-slate-100 rounded-full"></div>
-                <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                <svg class="w-8 h-8 text-emerald-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-            </div>
-            <div class="text-center">
-                <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Processando IA</h3>
-                <p class="text-xs text-slate-500 font-medium mt-1">Lendo dados do pedido...</p>
-            </div>
-        </div>
-    </div>
+    <!-- MODAIS E OVERLAYS -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[200] hidden flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"><div class="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6"><div class="relative"><div class="w-16 h-16 border-4 border-slate-100 rounded-full"></div><div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div><svg class="w-8 h-8 text-emerald-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div><div class="text-center"><h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Processando</h3><p class="text-xs text-slate-500 font-medium mt-1">Aguarde...</p></div></div></div>
+    
+    <div id="apiKeyModal" class="fixed inset-0 z-[300] hidden flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"><h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">Configurar IA</h3><p class="text-slate-600 text-sm mb-4">Insira sua chave Gemini API.</p><div class="mb-4"><input type="text" id="inputApiKey" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-sm focus:border-emerald-500 outline-none" placeholder="AIza..."></div><button id="btnSaveApiKey" class="w-full bg-slate-900 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold uppercase text-xs">Salvar</button></div></div>
+    
+    <div id="saveRouteModal" class="fixed inset-0 z-[250] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4"><div class="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl"><h3 class="text-lg font-bold text-slate-800 mb-4">Salvar Rota Atual</h3><input type="text" id="routeSaveName" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-sm mb-4 outline-none focus:border-emerald-500" placeholder="Nome (Ex: Zona Norte)"><div class="flex gap-3 justify-end"><button onclick="document.getElementById('saveRouteModal').classList.add('hidden')" class="px-4 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-100">CANCELAR</button><button id="btnConfirmSaveRoute" class="px-4 py-2 rounded text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700">SALVAR</button></div></div></div>
 
-    <!-- UTILS -->
-    <div id="deleteModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-2xl"><h3 class="text-lg font-bold text-slate-800 mb-2">Confirmar Exclusão</h3><p class="text-slate-500 text-sm mb-6">Ação irreversível.</p><div class="flex gap-3 justify-end"><button id="btnCancelDelete" class="px-4 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-100">CANCELAR</button><button id="btnConfirmDelete" class="px-4 py-2 rounded text-xs font-bold bg-red-600 text-white hover:bg-red-700">EXCLUIR</button></div></div>
-    </div>
-    <div id="toast" class="fixed top-6 right-6 z-[100] hidden transition-all duration-300 transform translate-x-full"><div class="bg-slate-800 text-white px-6 py-3 rounded shadow-xl flex items-center gap-3 border-l-4 border-emerald-500"><div id="toastDot" class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div><span id="toastMsg" class="text-xs font-bold uppercase tracking-wide">Mensagem</span></div></div>
+    <div id="deleteModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"><div class="bg-white rounded-lg p-6 max-w-sm w-full shadow-2xl"><h3 class="text-lg font-bold text-slate-800 mb-2">Confirmar</h3><p class="text-slate-500 text-sm mb-6">Ação irreversível.</p><div class="flex gap-3 justify-end"><button id="btnCancelDelete" class="px-4 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-100">CANCELAR</button><button id="btnConfirmDelete" class="px-4 py-2 rounded text-xs font-bold bg-red-600 text-white hover:bg-red-700">EXCLUIR</button></div></div></div>
+    <div id="toast" class="fixed top-6 right-6 z-[100] hidden transition-all duration-300 transform translate-x-full"><div class="bg-slate-800 text-white px-6 py-3 rounded shadow-xl flex items-center gap-3 border-l-4 border-emerald-500"><div id="toastDot" class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div><span id="toastMsg" class="text-xs font-bold uppercase tracking-wide">Msg</span></div></div>
+    
+    <div id="permissionModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border-l-8 border-red-500"><h3 class="text-2xl font-bold text-slate-800 mb-2">Acesso Bloqueado</h3><p class="text-slate-600 text-sm mb-4">Atualize as regras no Firebase.</p><div class="flex justify-end"><button onclick="document.getElementById('permissionModal').classList.add('hidden')" class="px-6 py-3 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg">Entendi</button></div></div></div>
+    
+    <div id="analysisModal" class="fixed inset-0 z-[250] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4"><div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]"><div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></div><div><h3 class="text-lg font-bold text-slate-800">Análise Logística</h3><p class="text-xs text-slate-500">Relatório IA</p></div></div><button onclick="document.getElementById('analysisModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div><div class="p-8 overflow-y-auto ai-report custom-scrollbar" id="analysisContent"><p class="text-center text-slate-400">Carregando...</p></div></div></div>
 
-    <!-- MODAL DE ERRO DE PERMISSÃO -->
-    <div id="permissionModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl border-l-8 border-red-500">
-            <h3 class="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                Acesso Bloqueado pelo Firebase
-            </h3>
-            <p class="text-slate-600 text-sm mb-4 leading-relaxed">
-                O banco de dados foi criado, mas as <b>Regras de Segurança</b> estão impedindo o salvamento dos dados. Você precisa liberar o acesso no painel do Firebase.
-            </p>
-            <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 mb-6">
-                <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">1. Vá em Firestore Database > Aba Regras</p>
-                <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">2. Cole este código e clique em Publicar:</p>
-                <pre class="bg-slate-800 text-emerald-400 p-3 rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}</pre>
-            </div>
-            <div class="flex justify-end">
-                <button onclick="document.getElementById('permissionModal').classList.add('hidden')" class="px-6 py-3 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg">Entendi, vou corrigir</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- LÓGICA -->
+    <!-- SCRIPT -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-        
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, getDocs, updateDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // State (Mover para o topo para evitar ReferenceError)
-        let orders = [], vehicles = [], map = null, markersGroup = null, itemToDeleteInfo = null, editingVehicleId = null;
+        // 1. DADOS
+        let orders=[], vehicles=[], team=[], routes=[], map=null, markersGroup=null, itemToDeleteInfo=null, editingVehicleId=null, editingTeamId=null;
+        let apiKey = localStorage.getItem('gemini_api_key') || "";
+        let currentRouteDraft = [], currentViewingRouteId = null;
+        let dashboardCharts = { drivers: null, vehicles: null, status: null };
 
-        // --- ÁREA DE CONFIGURAÇÃO (SUAS CHAVES REAIS) ---
         const firebaseConfig = {
             apiKey: "AIzaSyD1Lj__jgJdw6ovVHtRMDJTFrpd2w2Iy1Y",
             authDomain: "azevedo-logistica.firebaseapp.com",
@@ -196,275 +283,360 @@ service cloud.firestore {
             messagingSenderId: "105749084368",
             appId: "1:105749084368:web:71d2d9c90cd937ca6346d5"
         };
+        const ORDERS_COLLECTION='orders', VEHICLES_COLLECTION='vehicles', TEAM_COLLECTION='team', ROUTES_COLLECTION='routes';
 
-        const apiKey = "AIzaSyB7EIw_Bz9pAwvkt_t2KKgD9SMznAdF5K8";
-        
-        const ORDERS_COLLECTION = 'orders';
-        const VEHICLES_COLLECTION = 'vehicles';
-
-        // --- INICIALIZAÇÃO ---
         let app, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            console.log("Firebase conectado com sucesso!");
-            document.getElementById('statusDot').classList.replace('bg-amber-500', 'bg-emerald-500');
-            setupDatabase();
-            initMap();
-        } catch (e) {
-            console.error("Erro ao conectar Firebase. Verifique suas chaves.", e);
-            showToast("Erro de Configuração (Veja o Console)", "error");
-        }
+        try { app=initializeApp(firebaseConfig); db=getFirestore(app); document.getElementById('statusDot').classList.replace('bg-amber-500','bg-emerald-500'); setupDatabase(); initMap(); }
+        catch(e){ console.error(e); showToast("Erro Config","error"); }
 
-        // UI Refs & Navigation
-        const views = { planning: document.getElementById('viewPlanning'), fleet: document.getElementById('viewFleet') };
-        const navBtns = { planning: document.getElementById('navPlanning'), fleet: document.getElementById('navFleet') };
-        
-        function switchView(viewName) {
-            Object.values(navBtns).forEach(btn => btn.classList.remove('active'));
-            Object.values(views).forEach(view => view.classList.add('hidden'));
-            navBtns[viewName].classList.add('active');
-            views[viewName].classList.remove('hidden');
-            if (viewName === 'planning' && map) setTimeout(() => map.invalidateSize(), 100);
-        }
-        navBtns.planning.onclick = () => switchView('planning');
-        navBtns.fleet.onclick = () => switchView('fleet');
-
-        // Database Listeners
+        // 2. REGRAS
         function setupDatabase() {
-            if (!db) return;
-            
-            const handlePermissionError = (error) => {
-                console.error("Erro Firebase:", error);
-                if (error.code === 'permission-denied' || error.message.includes('permission')) {
-                    document.getElementById('permissionModal').classList.remove('hidden');
-                }
-            };
-
-            onSnapshot(collection(db, ORDERS_COLLECTION), (snap) => {
-                orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                updatePlanningUI();
-            }, handlePermissionError);
-
-            onSnapshot(collection(db, VEHICLES_COLLECTION), (snap) => {
-                vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                updateFleetUI();
-            }, handlePermissionError);
+            if(!db)return;
+            const hErr = (e) => { if(e.code==='permission-denied') document.getElementById('permissionModal').classList.remove('hidden'); };
+            onSnapshot(collection(db, ORDERS_COLLECTION), s=>{ currentRouteDraft=s.docs.map(d=>({id:d.id,...d.data()})); if(!currentViewingRouteId) updatePlanningUI(); safeUpdateDashboard(); }, hErr);
+            onSnapshot(collection(db, VEHICLES_COLLECTION), s=>{ vehicles=s.docs.map(d=>({id:d.id,...d.data()})); updateFleetUI(); safeUpdateDashboard(); }, hErr);
+            onSnapshot(collection(db, TEAM_COLLECTION), s=>{ team=s.docs.map(d=>({id:d.id,...d.data()})); updateTeamUI(); safeUpdateDashboard(); }, hErr);
+            onSnapshot(collection(db, ROUTES_COLLECTION), s=>{ routes=s.docs.map(d=>({id:d.id,...d.data()})); updateSavedRoutesUI(); if(currentViewingRouteId) { const r=routes.find(x=>x.id===currentViewingRouteId); if(r) renderRouteDetailView(r); } updateHistoryUI(); safeUpdateDashboard(); }, hErr);
         }
 
-        // Fleet Logic
-        const fleetFormTitle = document.getElementById('fleetFormTitle');
-        const fleetModelInput = document.getElementById('fleetModel');
-        const fleetPlateInput = document.getElementById('fleetPlate');
-        const fleetWeightInput = document.getElementById('fleetWeight');
-        const btnSaveFleet = document.getElementById('btnSaveFleet');
-        const btnCancelEdit = document.getElementById('btnCancelEdit');
-        const fleetListBody = document.getElementById('fleetListBody');
-
-        btnCancelEdit.onclick = resetFleetForm;
-        function resetFleetForm() {
-            fleetModelInput.value = ''; fleetPlateInput.value = ''; fleetWeightInput.value = '';
-            editingVehicleId = null; fleetFormTitle.innerText = "Cadastro de Veículo";
-            btnSaveFleet.innerText = "Salvar Veículo"; btnCancelEdit.classList.add('hidden');
+        function safeSetText(id, val) { const el = document.getElementById(id); if(el) el.innerText = val; }
+        
+        function safeUpdateDashboard() {
+            if(document.getElementById('dashTotalDeliveries')) updateDashboardUI();
         }
 
-        btnSaveFleet.onclick = async () => {
-            const model = fleetModelInput.value.trim(), plate = fleetPlateInput.value.trim().toUpperCase(), weight = parseFloat(fleetWeightInput.value);
-            if (!model || !plate || isNaN(weight)) return showToast("Preencha todos os campos", "error");
+        // --- DASHBOARD LOGIC ---
+        function updateDashboardUI() {
+             const allRouteOrders = routes.flatMap(r => r.orders.map(o => ({...o, routeId: r.id, vehicleModel: r.vehicleModel, driverName: r.driverName})));
+            const allOrders = [...allRouteOrders, ...currentRouteDraft];
+            const totalDel = allOrders.length;
+            const completed = allOrders.filter(o => o.status === 'Entregue').length;
+            const inProgress = allOrders.filter(o => o.status === 'Em Rota').length;
             
-            btnSaveFleet.innerText = "Salvando...";
-            try {
-                const data = { model, plate, capacity: weight, name: `${model} - ${plate}`, createdAt: Date.now() };
-                if (editingVehicleId) {
-                    await updateDoc(doc(db, VEHICLES_COLLECTION, editingVehicleId), data);
-                    showToast("Atualizado!", "success");
-                } else {
-                    await addDoc(collection(db, VEHICLES_COLLECTION), data);
-                    showToast("Cadastrado!", "success");
-                }
-                resetFleetForm();
-            } catch (e) { 
-                console.error(e); 
-                if (e.code === 'permission-denied') document.getElementById('permissionModal').classList.remove('hidden');
-                else showToast("Erro ao salvar: " + e.code, "error"); 
+            safeSetText('dashTotalDeliveries', totalDel);
+            safeSetText('dashCompleted', completed);
+            safeSetText('dashInProgress', inProgress);
+            safeSetText('dashSuccessRate', totalDel > 0 ? Math.round((completed/totalDel)*100) + '%' : '0%');
+            
+            const driverCounts = {}; allRouteOrders.forEach(o => { if (o.status === 'Entregue' && o.driverName) driverCounts[o.driverName] = (driverCounts[o.driverName] || 0) + 1; });
+            const topDriverEntry = Object.entries(driverCounts).sort((a,b) => b[1] - a[1])[0];
+            safeSetText('cardTopDriver', topDriverEntry ? `${topDriverEntry[0]} (${topDriverEntry[1]})` : '---');
+
+            const customerVol = {}; allOrders.forEach(o => { const name = o.cliente || 'Desconhecido'; if (!customerVol[name]) customerVol[name] = { count: 0, value: 0 }; customerVol[name].count++; customerVol[name].value += (Number(o.total) || 0); });
+            const topCustomers = Object.entries(customerVol).sort((a,b) => b[1].value - a[1].value).slice(0, 5);
+            const tableTop = document.getElementById('tableTopCustomers');
+            if(tableTop) tableTop.innerHTML = topCustomers.map(([name, stats], i) => `<tr class="hover:bg-slate-50"><td class="px-4 py-3 font-medium text-slate-700">${i+1}. ${name}</td><td class="px-4 py-3 text-right text-slate-500">${stats.count}</td><td class="px-4 py-3 text-right font-bold text-emerald-600">${stats.value.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr>`).join('');
+            
+            if(document.getElementById('chartDrivers')) renderCharts(driverCounts, allRouteOrders, currentRouteDraft);
+        }
+
+        function renderCharts(driverCounts, allRouteOrders, draft) {
+            const driverLabels = Object.keys(driverCounts);
+            const driverData = Object.values(driverCounts);
+            const vehCounts = {}; allRouteOrders.forEach(o => { const v = o.vehicleModel || 'N/A'; vehCounts[v] = (vehCounts[v] || 0) + 1; });
+            const statuses = { 'Entregue': 0, 'Pendente': 0, 'Cancelado': 0, 'Em Rota': 0 };
+            allRouteOrders.forEach(o => { const s = o.status || 'Pendente'; if(statuses[s]!==undefined) statuses[s]++; });
+            statuses['Pendente'] += draft.length;
+
+            if (dashboardCharts.drivers) dashboardCharts.drivers.destroy();
+            dashboardCharts.drivers = new Chart(document.getElementById('chartDrivers'), { type: 'bar', data: { labels: driverLabels, datasets: [{ label: 'Entregas', data: driverData, backgroundColor: '#6366f1' }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+            
+            if (dashboardCharts.vehicles) dashboardCharts.vehicles.destroy();
+            dashboardCharts.vehicles = new Chart(document.getElementById('chartVehicles'), { type: 'bar', data: { labels: Object.keys(vehCounts), datasets: [{ label: 'Pedidos', data: Object.values(vehCounts), backgroundColor: '#3b82f6' }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+            
+             if (dashboardCharts.status) dashboardCharts.status.destroy();
+            dashboardCharts.status = new Chart(document.getElementById('chartStatus'), { type: 'doughnut', data: { labels: Object.keys(statuses), datasets: [{ data: Object.values(statuses), backgroundColor: ['#10b981', '#94a3b8', '#ef4444', '#f59e0b'], borderWidth: 0 }] }, options: { responsive: true, plugins: { legend: { position: 'right' } } } });
+        }
+
+
+        // --- HISTORY LOGIC ---
+        let historyViewMode = 'routes';
+
+        function updateHistoryUI() {
+            const search = document.getElementById('histSearchInput').value.toLowerCase();
+            const dateFilter = document.getElementById('histDateInput').value;
+            const headerRow = document.getElementById('histHeaderRow');
+            const body = document.getElementById('histBody');
+            
+            if(!body) return;
+            body.innerHTML = '';
+            
+            if (historyViewMode === 'routes') {
+                headerRow.innerHTML = '<th class="px-4 py-3">Data</th><th class="px-4 py-3">Rota</th><th class="px-4 py-3">Veículo</th><th class="px-4 py-3">Motorista</th><th class="px-4 py-3">Progresso</th>';
+                const filteredRoutes = routes.filter(r => {
+                    const rDate = new Date(r.createdAt).toISOString().split('T')[0];
+                    const matchesSearch = r.name.toLowerCase().includes(search) || (r.driverName && r.driverName.toLowerCase().includes(search));
+                    const matchesDate = !dateFilter || rDate === dateFilter;
+                    return matchesSearch && matchesDate;
+                }).sort((a,b) => b.createdAt - a.createdAt);
+
+                filteredRoutes.forEach(r => {
+                    const pct = Math.round((r.orders.filter(o=>o.status==='Entregue').length/r.orders.length)*100)||0;
+                    body.innerHTML += `<tr class="hover:bg-slate-50 cursor-pointer border-b border-slate-100" onclick="window.viewRoute('${r.id}'); switchView('planning');"><td class="px-4 py-3 text-slate-500">${new Date(r.createdAt).toLocaleDateString()}</td><td class="px-4 py-3 font-bold text-slate-700">${r.name}</td><td class="px-4 py-3 text-slate-600">${r.vehicleModel}</td><td class="px-4 py-3 text-slate-600">${r.driverName || '-'}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-bold ${pct===100?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${pct}%</span></td></tr>`;
+                });
+            } else {
+                headerRow.innerHTML = '<th class="px-4 py-3">Data</th><th class="px-4 py-3">Pedido</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3">Rota</th><th class="px-4 py-3 text-right">Valor</th><th class="px-4 py-3 text-center">Status</th>';
+                const allHistOrders = routes.flatMap(r => r.orders.map(o => ({...o, routeName: r.name, routeDate: r.createdAt})));
+                const filteredOrders = allHistOrders.filter(o => {
+                    const oDate = new Date(o.routeDate).toISOString().split('T')[0];
+                    const matchesSearch = o.cliente.toLowerCase().includes(search) || String(o.numero_pedido).toLowerCase().includes(search);
+                    const matchesDate = !dateFilter || oDate === dateFilter;
+                    return matchesSearch && matchesDate;
+                }).sort((a,b) => b.routeDate - a.routeDate);
+
+                filteredOrders.forEach(o => {
+                    body.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="px-4 py-3 text-slate-500">${new Date(o.routeDate).toLocaleDateString()}</td><td class="px-4 py-3 font-mono text-emerald-600">#${o.numero_pedido}</td><td class="px-4 py-3 font-medium text-slate-700">${o.cliente}</td><td class="px-4 py-3 text-slate-500 text-xs">${o.routeName}</td><td class="px-4 py-3 text-right text-slate-600">${Number(o.total).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded text-xs font-bold bg-slate-100">${o.status || 'Pendente'}</span></td></tr>`;
+                });
             }
-            finally { btnSaveFleet.innerText = editingVehicleId ? "Atualizar" : "Salvar Veículo"; }
+        }
+
+        // History View Controls
+        document.getElementById('btnHistRoutes').onclick = () => { 
+            historyViewMode = 'routes'; 
+            document.getElementById('btnHistRoutes').className = "px-4 py-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors";
+            document.getElementById('btnHistOrders').className = "px-4 py-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors";
+            updateHistoryUI(); 
         };
+        document.getElementById('btnHistOrders').onclick = () => { 
+            historyViewMode = 'orders'; 
+            document.getElementById('btnHistOrders').className = "px-4 py-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors";
+            document.getElementById('btnHistRoutes').className = "px-4 py-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors";
+            updateHistoryUI(); 
+        };
+        
+        document.getElementById('histSearchInput').addEventListener('input', updateHistoryUI);
+        document.getElementById('histDateInput').addEventListener('change', updateHistoryUI);
+        document.getElementById('btnHistClear').onclick = () => { document.getElementById('histSearchInput').value = ''; document.getElementById('histDateInput').value = ''; updateHistoryUI(); };
+
+
+        // Common Logic
+        async function geocodeAddress(addr) { try { const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`,{headers:{'User-Agent':'AzevedoTMS'}}); if(!r.ok)return null; const d=await r.json(); return d.length?{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}:null; } catch(e){return null;} }
+        async function extractIA(text, base64, mime) {
+             const overlay=document.getElementById('loadingOverlay'); overlay.classList.remove('hidden');
+             if(!apiKey){ overlay.classList.add('hidden'); document.getElementById('apiKeyModal').classList.remove('hidden'); return; }
+             try {
+                 const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:`Extraia JSON array: {numero_pedido, cliente (Nome Fantasia), vendedor, data_entrega, endereco_busca (rua, num, bairro, cidade, estado), total (number), peso (number, soma 'Qtde'/'Qtd' em KG). Contexto: Recife/PE.`}, ...(base64?[{inlineData:{mimeType:mime, data:base64}}]:[])]}]}) });
+                 const json=await res.json();
+                 let data=JSON.parse(json.candidates[0].content.parts[0].text.replace(/```json|```/g,''));
+                 if(!Array.isArray(data)) data=[data];
+                 let c=0;
+                 for(const i of data) {
+                     const oid=String(i.numero_pedido||Math.floor(Math.random()*100000));
+                     if(!currentRouteDraft.some(o=>String(o.numero_pedido)===oid)) {
+                         let geo={lat:null,lng:null}; if(i.endereco_busca) geo=await geocodeAddress(i.endereco_busca)||geo;
+                         await addDoc(collection(db,ORDERS_COLLECTION),{numero_pedido:oid, cliente:i.cliente||"Cli", vendedor:i.vendedor||"", data_entrega:i.data_entrega||"", endereco:i.endereco_busca||"--", total:Number(i.total)||0, peso:Number(i.peso)||0, lat:geo.lat, lng:geo.lng, createdAt:Date.now()});
+                         c++; await new Promise(r=>setTimeout(r,1100));
+                     }
+                 }
+                 showToast(c>0?`${c} Importados`:"Sem novos", c>0?"success":"info");
+             } catch(e){ console.error(e); showToast("Erro Leitura","error"); } finally{ overlay.classList.add('hidden'); }
+        }
 
         // UI Updates
-        function updateFleetUI() {
-            document.getElementById('fleetCountBadge').innerText = `${vehicles.length} Veículos`;
-            const sorted = [...vehicles].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
-            fleetListBody.innerHTML = vehicles.length ? sorted.map(v => `
-                <tr class="hover:bg-slate-50 transition-colors group">
-                    <td class="p-4"><div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div></td>
-                    <td class="p-4 font-medium text-slate-800">${v.model}</td>
-                    <td class="p-4 font-mono font-bold text-slate-600 bg-slate-50 w-fit rounded">${v.plate}</td>
-                    <td class="p-4 font-medium text-emerald-600">${v.capacity} Kg</td>
-                    <td class="p-4 text-right flex justify-end gap-2">
-                        <button class="btn-edit-veh text-slate-400 hover:text-blue-500 p-2" data-id="${v.id}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                        <button class="btn-delete-veh text-slate-300 hover:text-red-500 p-2" data-id="${v.id}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                    </td>
-                </tr>`).join('') : `<tr><td colspan="5" class="p-8 text-center text-slate-400">Sem veículos.</td></tr>`;
-            
-            const selector = document.getElementById('vehicleSelector');
-            const currentVal = selector.value;
-            selector.innerHTML = '<option value="">Selecione...</option>' + vehicles.map(v => `<option value="${v.id}" data-cap="${v.capacity}">${v.model} - ${v.plate}</option>`).join('');
-            if (currentVal && vehicles.find(v => v.id === currentVal)) selector.value = currentVal;
-        }
-
         function updatePlanningUI() {
-            const sorted = [...orders].sort((a,b) => b.createdAt - a.createdAt);
-            const total = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
-            document.getElementById('totalValue').innerText = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('totalOrders').innerText = orders.length;
-            document.getElementById('tableCount').innerText = orders.length;
-            document.getElementById('btnGenerateRoute').disabled = !orders.length;
-
-            document.getElementById('timelineContainer').innerHTML = orders.length ? sorted.map((o, i) => `
-                <div class="timeline-item relative pl-8 pb-6 group"><div class="timeline-line"></div><div class="absolute left-0 top-0 w-5 h-5 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-500 z-10 group-hover:border-emerald-500 transition-colors">${orders.length - i}</div><div class="bg-white rounded border hover:border-slate-200 hover:shadow-sm p-2 -mt-2 transition-all"><div class="flex justify-between items-start"><h4 class="text-xs font-bold text-slate-700 truncate w-32">${o.cliente}</h4><span class="text-[9px] font-mono text-slate-400">#${o.numero_pedido || 'N/A'}</span></div><p class="text-[10px] text-slate-500 truncate mt-0.5">${o.endereco || 'Endereço pendente'}</p><div class="flex items-center gap-2 mt-2"><span class="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">${o.total ? 'R$ ' + o.total.toFixed(2) : 'R$ 0,00'}</span></div></div></div>
-            `).join('') : `<div class="flex flex-col items-center justify-center h-full text-slate-300 gap-2"><p class="text-xs font-medium">Lista Vazia</p></div>`;
-
-            document.getElementById('tableBody').innerHTML = sorted.map((o, i) => `
-                <tr class="hover:bg-slate-50 group transition-colors"><td class="p-3 border-b border-slate-50 text-center font-bold text-slate-400">${orders.length - i}</td><td class="p-3 border-b border-slate-50 font-mono text-emerald-600 font-medium">#${o.numero_pedido || '--'}</td><td class="p-3 border-b border-slate-50 font-medium text-slate-700">${o.cliente}</td><td class="p-3 border-b border-slate-50 text-right font-medium text-slate-700">R$ ${o.total?.toFixed(2) || '0.00'}</td><td class="p-3 border-b border-slate-50 text-center"><button class="btn-delete-order text-slate-300 hover:text-red-500 p-1" data-id="${o.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>
-            `).join('');
-            renderMapPoints(orders);
-        }
-
-        // Map
-        function initMap() {
-            if (map) return;
-            map = L.map('map', { zoomControl: false }).setView([-8.0476, -34.8770], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-            markersGroup = L.layerGroup().addTo(map);
-            document.getElementById('btnZoomIn').onclick = () => map.zoomIn();
-            document.getElementById('btnZoomOut').onclick = () => map.zoomOut();
-        }
-        function renderMapPoints(list, isOptimized = false) {
-            if (!map || !markersGroup) return;
-            markersGroup.clearLayers();
-            const pts = [];
-            if (isOptimized) {
-                const icon = L.divIcon({ className: 'custom', html: `<div class="marker-depot w-8 h-8 text-xs font-bold">C</div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
-                L.marker([-8.0725, -34.9389], { icon }).bindPopup("CEASA Recife").addTo(markersGroup); pts.push([-8.0725, -34.9389]);
-            }
-            list.forEach((o, i) => {
-                if (o.lat && o.lng) {
-                    const idx = isOptimized ? (i + 1) : (list.length - i);
-                    const html = `<div class="relative w-8 h-8"><div class="marker-pin ${isOptimized ? 'bg-emerald-600' : 'bg-red-500'}"></div><span class="marker-text ${isOptimized ? 'text-emerald-800' : 'text-red-600'}">${idx}</span></div>`;
-                    L.marker([o.lat, o.lng], { icon: L.divIcon({ html, iconSize: [30, 42], iconAnchor: [15, 42] }) }).bindPopup(`<b>${o.cliente}</b>`).addTo(markersGroup);
-                    pts.push([o.lat, o.lng]);
-                }
-            });
-            if (pts.length) { map.fitBounds(L.latLngBounds(pts), { padding: [50, 50] }); L.polyline(pts, { color: isOptimized ? '#059669' : '#3B82F6', weight: 4, opacity: 0.7 }).addTo(markersGroup); }
-        }
-
-        // Logic & Upload
-        document.getElementById('btnGenerateRoute').onclick = () => {
-            if (!orders.length) return;
-            showToast("Otimizando...", "info");
-            let current = { lat: -8.0725, lng: -34.9389 }, unvisited = [...orders], optimized = [];
-            while (unvisited.length) {
-                let nearest = 0, minDist = Infinity;
-                for (let i = 0; i < unvisited.length; i++) {
-                    if (!unvisited[i].lat) continue;
-                    const d = Math.sqrt(Math.pow(unvisited[i].lat - current.lat, 2) + Math.pow(unvisited[i].lng - current.lng, 2));
-                    if (d < minDist) { minDist = d; nearest = i; }
-                }
-                const next = unvisited.splice(nearest, 1)[0];
-                optimized.push(next);
-                if (next.lat) current = { lat: next.lat, lng: next.lng };
-            }
-            renderMapPoints(optimized, true); showToast("Rota Otimizada!", "success");
-        };
-
-        const dropZone = document.getElementById('dropZone'), fileInput = document.getElementById('fileInput');
-        async function extractIA(text, base64, mime) {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.classList.remove('hidden');
+            const sorted=[...currentRouteDraft].sort((a,b)=>b.createdAt-a.createdAt);
+            const tV=currentRouteDraft.reduce((a,c)=>a+(Number(c.total)||0),0);
+            const tW=currentRouteDraft.reduce((a,c)=>a+(Number(c.peso)||0),0);
+            safeSetText('totalValue', tV.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+            safeSetText('totalWeightValue', `${tW.toFixed(2)} kg`);
+            if(document.getElementById('btnGenerateRoute')) document.getElementById('btnGenerateRoute').disabled=!currentRouteDraft.length;
+            if(document.getElementById('btnSaveRoute')) document.getElementById('btnSaveRoute').disabled=!currentRouteDraft.length;
+            updateOccupancy(currentRouteDraft);
             
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: `Extraia JSON pedidos (Recife/PE): {numero_pedido, cliente, endereco, total, lat, lng}.` }, ...(base64 ? [{ inlineData: { mimeType: mime, data: base64 } }] : [])] }], generationConfig: { responseMimeType: "application/json" } })
-                });
-                const json = await res.json();
-                
-                if (!json.candidates) throw new Error("Sem resposta da IA");
+            const tlContainer = document.getElementById('timelineContainer');
+            if(tlContainer) {
+                tlContainer.innerHTML=currentRouteDraft.length?sorted.map((o,i)=>`
+                <div class="timeline-item relative pl-8 pb-6 group"><div class="timeline-line"></div><div class="absolute left-0 top-0 w-5 h-5 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-500 z-10 group-hover:border-emerald-500">${currentRouteDraft.length-i}</div><div class="bg-white rounded border hover:border-slate-200 hover:shadow-sm p-2 -mt-2"><div class="flex justify-between"><h4 class="text-xs font-bold text-slate-700 truncate w-32">${o.cliente}</h4><span class="text-[9px] font-mono text-slate-400">#${o.numero_pedido}</span></div><p class="text-[10px] text-slate-500 truncate mt-0.5">${o.endereco}</p><div class="flex items-center gap-2 mt-2"><span class="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">${Number(o.total).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span><span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">${Number(o.peso).toFixed(1)}kg</span></div></div></div>
+            `).join(''):`<div class="flex flex-col items-center justify-center h-full text-slate-300 gap-2"><p class="text-xs font-medium">Lista Vazia</p></div>`;
+            }
 
-                let data = JSON.parse(json.candidates[0].content.parts[0].text);
-                if (!Array.isArray(data)) data = [data];
-                
-                let count = 0;
-                for (const item of data) {
-                    if (!orders.some(o => String(o.numero_pedido) === String(item.numero_pedido))) {
-                        await addDoc(collection(db, ORDERS_COLLECTION), { ...item, createdAt: Date.now() });
-                        count++;
-                    }
-                }
-                
-                if(count > 0) showToast(`${count} Pedidos Importados!`, "success");
-                else showToast("Nenhum pedido novo encontrado", "error");
-
-            } catch (e) { 
-                console.error(e);
-                showToast("Erro na Leitura: " + (e.message || "Verifique console"), "error"); 
-            } finally {
-                overlay.classList.add('hidden');
+            const tbBody = document.getElementById('tableBody');
+            if(tbBody) {
+                tbBody.innerHTML=sorted.map((o,i)=>`<tr class="hover:bg-slate-50"><td class="p-3 border-b text-center font-bold text-slate-400">${currentRouteDraft.length-i}</td><td class="p-3 border-b font-mono text-emerald-600">#${o.numero_pedido}</td><td class="p-3 border-b text-slate-700">${o.cliente}</td><td class="p-3 border-b text-right text-blue-600">${Number(o.peso).toFixed(2)} kg</td><td class="p-3 border-b text-right text-slate-700">${Number(o.total).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td class="p-3 border-b text-center"><span class="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">Pendente</span></td></tr>`).join('');
+            }
+            renderMapPoints(currentRouteDraft);
+        }
+        function updateSavedRoutesUI() {
+            const listEl = document.getElementById('savedRoutesList');
+            if(!listEl) return;
+            if(!routes.length) { listEl.innerHTML=`<p class="text-center text-slate-400 text-xs mt-10">Vazio</p>`; return; }
+            listEl.innerHTML = [...routes].sort((a,b)=>b.createdAt-a.createdAt).map(r=>{
+                const pct = Math.round((r.orders.filter(o=>o.status==='Entregue').length/r.orders.length)*100)||0;
+                return `<div class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:border-emerald-500 cursor-pointer group relative" onclick="window.viewRoute('${r.id}')"><div class="flex justify-between items-start mb-2"><h4 class="font-bold text-slate-800 text-sm">${r.name}</h4><span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-bold">${pct}%</span></div><div class="text-xs text-slate-500 space-y-1"><p>${r.driverName||'S/Mot'}</p><p>${new Date(r.createdAt).toLocaleDateString()}</p></div><div class="absolute bottom-0 left-0 h-1 bg-emerald-500" style="width:${pct}%"></div></div>`;
+            }).join('');
+        }
+        function renderRouteDetailView(r) {
+            safeSetText('detailRouteName', r.name);
+            const pct = Math.round((r.orders.filter(o=>o.status==='Entregue').length/r.orders.length)*100)||0;
+            safeSetText('detailRouteProgress', `${pct}% Concluído`);
+            renderMapPoints(r.orders, true);
+            const listEl = document.getElementById('routeOrdersList');
+            if(listEl) {
+                listEl.innerHTML = r.orders.map((o,i)=>`
+                <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex flex-col gap-2 ${o.status==='Entregue'?'opacity-60':''}"><div class="flex justify-between items-start border-l-4 ${o.status==='Entregue'?'border-emerald-500':(o.status==='Cancelado'?'border-red-500':'border-slate-300')} pl-3"><div><span class="text-[9px] font-bold text-slate-400">#${i+1}</span><h4 class="text-xs font-bold text-slate-800">${o.cliente}</h4><p class="text-[10px] text-slate-500 truncate w-48">${o.endereco}</p></div><div class="text-right"><span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100">${o.status||'Pendente'}</span></div></div><div class="flex gap-2 justify-end border-t border-slate-100 pt-2"><button onclick="window.updateOrderStatus('${r.id}',${i},'Em Rota')" class="p-1.5 rounded text-[9px] font-bold uppercase bg-blue-50 text-blue-600">Rota</button><button onclick="window.updateOrderStatus('${r.id}',${i},'Entregue')" class="p-1.5 rounded text-[9px] font-bold uppercase bg-emerald-50 text-emerald-600">Entregue</button><button onclick="window.updateOrderStatus('${r.id}',${i},'Cancelado')" class="p-1.5 rounded text-[9px] font-bold uppercase bg-red-50 text-red-600">Canc.</button></div></div>
+            `).join('');
             }
         }
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = async (e) => {
-            for (const file of e.target.files) {
-                if (file.type.includes('pdf')) {
-                    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-                    let txt = ""; for(let i=1; i<=pdf.numPages; i++) txt += (await (await pdf.getPage(i)).getTextContent()).items.map(s=>s.str).join(" ");
-                    extractIA(txt, null, null);
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = () => extractIA(null, reader.result.split(',')[1], file.type);
-                    reader.readAsDataURL(file);
-                }
+        window.viewRoute = (rid) => { currentViewingRouteId=rid; document.getElementById('contentPlanSaved').classList.add('hidden'); document.getElementById('contentRouteDetail').classList.remove('hidden'); const r=routes.find(x=>x.id===rid); if(r) renderRouteDetailView(r); };
+        window.updateOrderStatus = async (rid, idx, st) => { const r=routes.find(x=>x.id===rid); if(!r)return; const ords=[...r.orders]; ords[idx].status=st; await updateDoc(doc(db,ROUTES_COLLECTION,rid),{orders:ords}); showToast(`Pedido ${st}`,"success"); };
+
+        function updateOccupancy(list=[]) {
+            const sel=document.getElementById('vehicleSelector'); 
+            if(!sel) return;
+            const opt=sel.options[sel.selectedIndex];
+            const cap=opt?parseFloat(opt.getAttribute('data-cap'))||0:0;
+            
+            const tw=list.reduce((a,c)=>a+(Number(c.peso)||0),0);
+            const val=document.getElementById('occupancyValue');
+            const lbl=document.getElementById('vehicleCapacityLabel');
+            
+            if(cap>0 && val && lbl) { 
+                lbl.innerText = `Capacidade: ${cap} Kg`;
+                const pct=((tw/cap)*100).toFixed(1); 
+                val.innerText=`${pct}%`; 
+                val.className=`text-xs font-bold ${pct>100?'text-red-600':'text-slate-700'}`; 
             }
+            else if(val && lbl) { 
+                lbl.innerText = "Selecione um veículo";
+                val.innerText="--%"; 
+            }
+        }
+
+        // Map Render
+        function initMap() { if(map)return; map=L.map('map',{zoomControl:false}).setView([-8.0476,-34.8770],12); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); markersGroup=L.layerGroup().addTo(map); document.getElementById('btnZoomIn').onclick=()=>map.zoomIn(); document.getElementById('btnZoomOut').onclick=()=>map.zoomOut(); }
+        function renderMapPoints(list, opt=false) {
+            if(!map)return; markersGroup.clearLayers(); const pts=[];
+            if(opt) { const i=L.divIcon({className:'c',html:`<div class="marker-depot w-8 h-8 text-xs font-bold">C</div>`,iconSize:[32,32]}); L.marker([-8.0725,-34.9389],{icon:i}).addTo(markersGroup); pts.push([-8.0725,-34.9389]); }
+            list.forEach((o,i)=>{ if(o.lat){ const html=`<div class="relative w-8 h-8"><div class="marker-pin ${opt?'bg-emerald-600':'bg-red-500'}"></div><span class="marker-text text-white">${opt?i+1:list.length-i}</span></div>`; L.marker([o.lat,o.lng],{icon:L.divIcon({html,iconSize:[30,42],iconAnchor:[15,42]})}).bindPopup(o.cliente).addTo(markersGroup); pts.push([o.lat,o.lng]); } });
+            if(pts.length){ map.fitBounds(L.latLngBounds(pts),{padding:[50,50]}); if(opt) L.polyline(pts,{color:'#059669',weight:4}).addTo(markersGroup); }
+        }
+
+        // Events
+        const navs={planning:'navPlanning',fleet:'navFleet',team:'navTeam',dash:'navDashboard',history:'navHistory'}, views={planning:'viewPlanning',fleet:'viewFleet',team:'viewTeam',dash:'viewDashboard',history:'viewHistory'};
+        function switchView(n){ Object.values(navs).forEach(k=>document.getElementById(k).classList.remove('active')); document.getElementById(navs[n]).classList.add('active'); Object.values(views).forEach(k=>document.getElementById(k).classList.add('hidden')); document.getElementById(views[n]).classList.remove('hidden'); if(n==='planning'&&map) setTimeout(()=>map.invalidateSize(),100); if(n==='dash') updateDashboardUI(); if(n==='history') updateHistoryUI(); }
+        Object.keys(navs).forEach(k=>document.getElementById(navs[k]).onclick=()=>switchView(k));
+
+        const vSel = document.getElementById('vehicleSelector');
+        if(vSel) vSel.onchange=()=>updateOccupancy(currentRouteDraft);
+        
+        const fIn=document.getElementById('fileInput'); document.getElementById('dropZone').onclick=()=>fIn.click();
+        fIn.onchange=(e)=>Array.from(e.target.files).forEach(f=>{const r=new FileReader(); r.onload=()=>extractIA(null,r.result.split(',')[1],f.type); r.readAsDataURL(f);});
+        window.addEventListener('paste',e=>{for(const i of e.clipboardData.items)if(i.type.indexOf('image')!==-1){const f=i.getAsFile();const r=new FileReader();r.onload=()=>extractIA(null,r.result.split(',')[1],f.type);r.readAsDataURL(f);}});
+
+        document.getElementById('btnGenerateRoute').onclick=()=>{
+            let cur={lat:-8.0725,lng:-34.9389}, un=[...currentRouteDraft], res=[];
+            while(un.length){ let nr=0, min=Infinity; for(let i=0;i<un.length;i++){ if(!un[i].lat)continue; const d=Math.sqrt(Math.pow(un[i].lat-cur.lat,2)+Math.pow(un[i].lng-cur.lng,2)); if(d<min){min=d;nr=i;} } const nx=un.splice(nr,1)[0]; res.push(nx); if(nx.lat)cur={lat:nx.lat,lng:nx.lng}; }
+            renderMapPoints(res,true); showToast("Otimizado!","success");
+        };
+        document.getElementById('btnSaveRoute').onclick=()=>{ const v=document.getElementById('vehicleSelector'); if(!v.value)return showToast("Selecione Veículo","error"); document.getElementById('saveRouteModal').classList.remove('hidden'); };
+        
+        document.getElementById('btnConfirmSaveRoute').onclick=async()=>{
+            const n=document.getElementById('routeSaveName').value; if(!n)return;
+            const sel=document.getElementById('vehicleSelector'); const opt=sel.options[sel.selectedIndex];
+            const dSel=document.getElementById('planningDriverSelect').value;
+            const hSel=document.getElementById('planningHelperSelect').value;
+            
+            await addDoc(collection(db,ROUTES_COLLECTION),{
+                name:n,vehicleId:sel.value,vehicleModel:opt.text,
+                driverName: dSel, helperName: hSel, // Save selected driver/helper
+                capacity: parseFloat(opt.getAttribute('data-cap')),
+                orders:currentRouteDraft,createdAt:Date.now()
+            });
+            const b=writeBatch(db); currentRouteDraft.forEach(o=>b.delete(doc(db,ORDERS_COLLECTION,o.id))); await b.commit();
+            document.getElementById('saveRouteModal').classList.add('hidden'); showToast("Rota Salva!","success"); switchPlanTab('saved');
         };
 
-        // Paste Handler (Restored)
-        window.addEventListener('paste', e => {
-            const items = e.clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const file = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = () => extractIA(null, reader.result.split(',')[1], file.type);
-                    reader.readAsDataURL(file);
+        // CRUD Frota & Team
+        document.getElementById('btnSaveFleet').onclick=async()=>{ const m=document.getElementById('fleetModel').value, p=document.getElementById('fleetPlate').value, w=document.getElementById('fleetWeight').value; if(!m)return; try { const d={model:m,plate:p.toUpperCase(),capacity:Number(w),createdAt:Date.now()}; if(editingVehicleId) await updateDoc(doc(db,VEHICLES_COLLECTION,editingVehicleId),d); else await addDoc(collection(db,VEHICLES_COLLECTION),d); showToast("Salvo"); document.getElementById('fleetModel').value=""; document.getElementById('fleetPlate').value=""; document.getElementById('fleetWeight').value=""; editingVehicleId=null; document.getElementById('btnSaveFleet').innerText="Salvar Veículo"; document.getElementById('btnCancelEdit').classList.add('hidden'); } catch(e){showToast("Erro salvar","error");} };
+
+        document.getElementById('btnSaveTeam').onclick=async()=>{ 
+            const n=document.getElementById('teamName').value, r=document.getElementById('teamRole').value; 
+            const cpf=document.getElementById('teamCpf').value, pix=document.getElementById('teamPix').value, cnh=document.getElementById('teamCnhDate').value;
+            if(!n)return; 
+            try {
+                const d = { name:n, role:r, cpf, pix, cnhDate:cnh, createdAt:Date.now() };
+                if(editingTeamId) await updateDoc(doc(db,TEAM_COLLECTION,editingTeamId),d);
+                else await addDoc(collection(db,TEAM_COLLECTION),d);
+                showToast("Salvo"); 
+                // Reset form manually
+                document.getElementById('teamName').value=""; document.getElementById('teamRole').value="Motorista";
+                document.getElementById('teamCpf').value=""; document.getElementById('teamPix').value=""; document.getElementById('teamCnhDate').value="";
+                editingTeamId=null; document.getElementById('teamFormTitle').innerText="Cadastro de Equipe"; 
+                document.getElementById('btnSaveTeam').innerText="Salvar Funcionário"; document.getElementById('btnCancelTeamEdit').classList.add('hidden');
+            } catch(e){showToast("Erro salvar","error");}
+        };
+        
+        function updateFleetUI(){
+            const s=document.getElementById('vehicleSelector');
+            if(s) s.innerHTML='<option value="">Selecione...</option>'+vehicles.map(v=>`<option value="${v.id}" data-cap="${v.capacity}">${v.model} - ${v.plate}</option>`).join('');
+            
+            const tbody = document.getElementById('fleetListBody');
+            if(tbody) tbody.innerHTML = vehicles.map(v => `<tr><td class="p-3"><div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div></td><td class="p-3 font-medium">${v.model}</td><td class="p-3 font-mono bg-slate-50 w-fit rounded">${v.plate}</td><td class="p-3 text-emerald-600">${v.capacity}kg</td><td class="p-3 text-right flex justify-end gap-2"><button class="btn-edit-veh text-blue-400 p-1" data-id="${v.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button class="btn-delete-veh text-red-400 p-1" data-id="${v.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`).join('');
+        }
+        function updateTeamUI(){
+            // Populate Planning Selects
+            const d=document.getElementById('planningDriverSelect'), h=document.getElementById('planningHelperSelect');
+            if(d && h) {
+                const drs=team.filter(x=>x.role==='Motorista'), hls=team.filter(x=>x.role==='Ajudante');
+                d.innerHTML='<option value="">Motorista...</option>'+drs.map(x=>`<option value="${x.name}">${x.name}</option>`).join('');
+                h.innerHTML='<option value="">Ajudante...</option>'+hls.map(x=>`<option value="${x.name}">${x.name}</option>`).join('');
+            }
+            const tbody = document.getElementById('teamListBody');
+            if(tbody) tbody.innerHTML = team.map(x => `<tr><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${x.role==='Motorista'?'bg-blue-100 text-blue-700':'bg-orange-100 text-orange-700'}">${x.role}</span></td><td class="p-3 font-medium">${x.name}</td><td class="p-3 text-xs text-slate-500">${x.cpf||'-'} / ${x.pix||'-'}</td><td class="p-3 text-xs text-slate-500">${x.cnhDate||'-'}</td><td class="p-3 text-right flex justify-end gap-2"><button class="btn-edit-team text-blue-400 p-1" data-id="${x.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button class="btn-delete-team text-red-400 p-1" data-id="${x.id}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`).join('');
+        }
+
+        // TABS
+        const tpn=document.getElementById('tabPlanNew'), tps=document.getElementById('tabPlanSaved'), cpn=document.getElementById('contentPlanNew'), cps=document.getElementById('contentPlanSaved'), crd=document.getElementById('contentRouteDetail');
+        function switchPlanTab(m){ 
+            currentViewingRouteId=null; markersGroup.clearLayers(); 
+            const tb = document.getElementById('tableBody');
+            if(tb) tb.innerHTML='';
+            
+            if(m==='new'){ tpn.classList.add('active-tab'); tps.classList.remove('active-tab'); cpn.classList.remove('hidden'); cps.classList.add('hidden'); crd.classList.add('hidden'); updatePlanningUI(); }
+            else { tpn.classList.remove('active-tab'); tps.classList.add('active-tab'); cpn.classList.add('hidden'); cps.classList.remove('hidden'); crd.classList.add('hidden'); updateSavedRoutesUI(); }
+        }
+        document.getElementById('btnBackToRoutes').onclick=()=>{ crd.classList.add('hidden'); cps.classList.remove('hidden'); currentViewingRouteId=null; };
+
+        // Deletion & Editing delegation
+        document.body.addEventListener('click', e => {
+            const editVeh = e.target.closest('.btn-edit-veh');
+            if (editVeh) {
+                const v = vehicles.find(x => x.id === editVeh.dataset.id);
+                if (v) { 
+                    document.getElementById('fleetModel').value = v.model; document.getElementById('fleetPlate').value = v.plate; document.getElementById('fleetWeight').value = v.capacity;
+                    editingVehicleId = v.id; document.getElementById('fleetFormTitle').innerText = "Editar Veículo";
+                    document.getElementById('btnSaveFleet').innerText = "Atualizar"; document.getElementById('btnCancelEdit').classList.remove('hidden');
                 }
             }
-        });
-
-        // Actions
-        document.body.addEventListener('click', e => {
-            const editBtn = e.target.closest('.btn-edit-veh');
-            const delVeh = e.target.closest('.btn-delete-veh');
-            const delOrd = e.target.closest('.btn-delete-order');
-            if (editBtn) {
-                const v = vehicles.find(x => x.id === editBtn.dataset.id);
-                if (v) { fleetModelInput.value = v.model; fleetPlateInput.value = v.plate; fleetWeightInput.value = v.capacity; editingVehicleId = v.id; fleetFormTitle.innerText = "Editar"; btnSaveFleet.innerText = "Atualizar"; btnCancelEdit.classList.remove('hidden'); fleetModelInput.scrollIntoView(); }
+            const editTeam = e.target.closest('.btn-edit-team');
+            if (editTeam) {
+                const t = team.find(x => x.id === editTeam.dataset.id);
+                if (t) {
+                    document.getElementById('teamName').value = t.name; document.getElementById('teamRole').value = t.role;
+                    document.getElementById('teamCpf').value = t.cpf || ''; document.getElementById('teamPix').value = t.pix || ''; document.getElementById('teamCnhDate').value = t.cnhDate || '';
+                    editingTeamId = t.id; document.getElementById('teamFormTitle').innerText = "Editar Funcionário";
+                    document.getElementById('btnSaveTeam').innerText = "Atualizar"; document.getElementById('btnCancelTeamEdit').classList.remove('hidden');
+                }
             }
+            const delVeh = e.target.closest('.btn-delete-veh');
             if (delVeh) { itemToDeleteInfo = { col: VEHICLES_COLLECTION, id: delVeh.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
+            const delTeam = e.target.closest('.btn-delete-team');
+            if (delTeam) { itemToDeleteInfo = { col: TEAM_COLLECTION, id: delTeam.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
+            const delOrd = e.target.closest('.btn-delete-order');
             if (delOrd) { itemToDeleteInfo = { col: ORDERS_COLLECTION, id: delOrd.dataset.id }; document.getElementById('deleteModal').classList.remove('hidden'); }
         });
-        document.getElementById('btnCancelDelete').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
+
         document.getElementById('btnConfirmDelete').onclick = async () => {
             if (itemToDeleteInfo) await deleteDoc(doc(db, itemToDeleteInfo.col, itemToDeleteInfo.id));
             document.getElementById('deleteModal').classList.add('hidden'); showToast("Removido!", "success");
         };
-        document.getElementById('btnClear').onclick = async () => { if(confirm("Limpar tudo?")) (await getDocs(collection(db, ORDERS_COLLECTION))).forEach(d => deleteDoc(d.ref)); };
+        document.getElementById('btnCancelDelete').onclick = () => document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('btnClear').onclick = async () => { if(confirm("Limpar pedidos?")) (await getDocs(collection(db, ORDERS_COLLECTION))).forEach(d => deleteDoc(d.ref)); };
+        
+        // Key Mgmt
+        document.getElementById('btnSaveApiKey').onclick=()=>{ const k=document.getElementById('inputApiKey').value.trim(); if(k.length>10){localStorage.setItem('gemini_api_key',k); apiKey=k; document.getElementById('apiKeyModal').classList.add('hidden');} };
+        function showToast(m,t){ const el=document.getElementById('toast'); document.getElementById('toastMsg').innerText=m; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'),3000); }
 
-        function showToast(msg, type) {
-            const t = document.getElementById('toast'); document.getElementById('toastMsg').innerText = msg;
-            t.className = `fixed top-6 right-6 z-[100] transition-all duration-300 transform translate-x-0 bg-white border-l-4 px-6 py-4 rounded shadow-2xl flex items-center gap-3 ${type === 'error' ? 'border-red-500' : 'border-emerald-500'}`;
-            document.getElementById('toastDot').className = `w-2 h-2 rounded-full animate-pulse ${type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`;
-            t.classList.remove('hidden'); setTimeout(() => { t.classList.add('translate-x-full'); setTimeout(()=>t.classList.add('hidden'),300); }, 3000);
-        }
     </script>
 </body>
 </html>
